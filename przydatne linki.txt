@@ -1,0 +1,6 @@
+https://dev.to/redis/top-10-sample-dataset-for-redis-for-you-28l7
+	- https://github.com/Redis-Developer/redis-datasets/tree/master/redistimeseries/AirQualityUCI
+	
+https://redis.io/learn/howtos/moviesdatabase/sampleapp
+	- https://github.com/RediSearch/redisearch-getting-started?tab=readme-ov-file
+	- https://github.com/redis-developer/basic-redis-chat-app-demo-python?tab=readme-ov-file

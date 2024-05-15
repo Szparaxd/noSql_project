@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Monitor</title>
+    <script>
+        async function fetchPulseData() {
+            const userId = '12345'; // Replace with dynamic user ID as needed
+            const date = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+            const response = await fetch(`/get_pulse?user_id=${userId}&date=${date}`);
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                const pulseList = document.getElementById('pulse-list');
+                pulseList.innerHTML = '';
+
+                data.data.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `Timestamp: ${new Date(item.timestamp * 1000).toLocaleString()}, Pulse: ${item.pulse}`;
+                    pulseList.appendChild(listItem);
+                });
+            } else {
+                console.error(data.message);
+            }
+        }
+
+        setInterval(fetchPulseData, 1000); // Refresh data every 5 seconds
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchPulseData(); // Initial data fetch
+        });
+    </script>
+</head>
+<body>
+    <h1>Pulse Monitor</h1>
+    <ul id="pulse-list"></ul>
+</body>
+</html>
