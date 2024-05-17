@@ -4,11 +4,14 @@ import json
 import time
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from initializer import *
 
 app = Flask(__name__)
+CORS(app)
+
 r = redis.Redis(host='localhost', port=6379, db=0)
 
 @app.route('/auth/register', methods=['POST'])
