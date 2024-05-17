@@ -59,24 +59,33 @@ def register_vitals():
     pulse = data.get('pulse')
     heart_rate = data.get('heart_rate')
     temperature = data.get('temperature')
-    
-    if not username or pulse is None or heart_rate is None or temperature is None:
-        return jsonify({'message': 'Username, pulse, heart_rate, and temperature are required'}), 400
-    
+
+    if not username:
+        return jsonify({'message': 'Username is required'}), 400
+
     if not r.exists(f"user:{username}"):
         return jsonify({'message': 'User does not exist'}), 400
-    
-    timestamp = time.time()
-    vital_data = {
-        'pulse': pulse,
-        'heart_rate': heart_rate,
-        'temperature': temperature,
-        'timestamp': timestamp
-    }
-    
-    r.zadd(f"user:{username}:vitals", {json.dumps(vital_data): timestamp})
-    
+
+    timestamp = int(time.time() * 1000)  # Use milliseconds to reduce the risk of collisions
+    registered_any_vital = False
+
+    if pulse is not None:
+        r.zadd(f"user:{username}:pulse", {str(timestamp): pulse})
+        registered_any_vital = True
+
+    if heart_rate is not None:
+        r.zadd(f"user:{username}:heart_rate", {str(timestamp): heart_rate})
+        registered_any_vital = True
+
+    if temperature is not None:
+        r.zadd(f"user:{username}:temperature", {str(timestamp): temperature})
+        registered_any_vital = True
+
+    if not registered_any_vital:
+        return jsonify({'message': 'At least one vital parameter (pulse, heart_rate, temperature) is required'}), 400
+
     return jsonify({'message': 'Vitals registered successfully'}), 201
+
 
 if __name__ == '__main__':
     initialize_data()
