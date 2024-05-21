@@ -1,0 +1,8 @@
+<div class="mt-2">
+  <input [formControl]="searchControl" placeholder="Search users...">
+  <ul *ngIf="suggestions.length">
+    <li *ngFor="let suggestion of suggestions" >
+      <button (click)="selectUser(suggestion)">{{ suggestion }}</button>
+    </li>
+  </ul>
+</div>

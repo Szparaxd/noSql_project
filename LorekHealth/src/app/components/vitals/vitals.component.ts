@@ -3,7 +3,6 @@ import { Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subscription, switchMap, takeUntil, timer } from 'rxjs';
 import { ApiService } from '../../services/api.service';
-import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-vitals',

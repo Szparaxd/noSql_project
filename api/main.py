@@ -17,8 +17,6 @@ r = redis.Redis(host='localhost', port=6379, db=0)
 @app.route('/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
-
-    print(data)
     username = data.get('username')
     password = data.get('password')
     
@@ -89,6 +87,62 @@ def register_vitals():
 
     return jsonify({'message': 'Vitals registered successfully'}), 201
 
+@app.route('/users', methods=['GET'])
+def get_users():
+    user_keys = r.keys("user:*")
+    usernames = {key.decode('utf-8').split(":")[1] for key in user_keys if key.count(b':') == 1}
+    return jsonify({'usernames': list(usernames)}), 200
+
+@app.route('/users/search', methods=['GET'])
+def search_users():
+    query = request.args.get('query', '')
+
+    if len(query) < 3:
+        return jsonify({'message': 'Query must be at least 3 characters long'}), 400
+
+    user_keys = r.keys("user:*")
+    usernames = {key.decode('utf-8').split(":")[1] for key in user_keys if key.count(b':') == 1}
+    matching_users = sorted([username for username in usernames if query.lower() in username.lower()])
+
+    return jsonify({'usernames': matching_users[:10]}), 200
+
+
+@app.route('/users/follow', methods=['GET'])
+def get_follow_user():
+    username = request.args.get('username', '')
+
+    user_keys = r.keys(f'user:{username}:follow_users:*')
+    follow_users = []
+    for key in user_keys:
+        if key.count(b':') == 3:
+            follow_user = key.decode('utf-8').split(":")[3]
+            critical_values = r.hgetall(key)
+            critical_values = {k.decode('utf-8'): float(v.decode('utf-8')) for k, v in critical_values.items()}
+            critical_values['username'] = follow_user
+            follow_users.append(critical_values)
+            
+    return jsonify({'follow_users': follow_users}), 200
+
+@app.route('/users/follow', methods=['POST'])
+def add_follow_user():
+    data = request.get_json()
+    username = data.get('username')
+    follow_user = data.get('follow_user')
+    
+    pulse = data.get('critical_pulse')
+    heart_rate = data.get('critical_heart_rate')
+    temperature = data.get('critical_temperature')
+    
+    critical_values = {}
+    if pulse is not None:
+        critical_values['critical_pulse'] = pulse
+    if heart_rate is not None:
+        critical_values['critical_heart_rate'] = heart_rate
+    if temperature is not None:
+        critical_values['critical_temperature'] = temperature
+
+    r.hset(f"user:{username}:follow_users:{follow_user}", mapping=critical_values)
+    return jsonify({'message': 'User added and critical values set'}), 201
 
 if __name__ == '__main__':
     initialize_data()

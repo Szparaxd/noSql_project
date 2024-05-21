@@ -1,0 +1,39 @@
+<div class="container-fluid border m-2">
+  <div class="row">
+    <div class="col">
+      <app-user-search (userSelected)="addFollowUser($event)"></app-user-search>
+    </div>
+  </div>
+  <div class="row mt-3">
+    <div class="col">
+      <table class="table table-striped" *ngIf="followUsers.length > 0">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Nazwa</th>
+            <th scope="col">Max Puls</th>
+            <th scope="col">Max Tętno</th>
+            <th scope="col">Max Temperatura</th>
+            <th scope="col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of followUsers">
+            <th scope="row">{{ user.username }}</th>
+            <td>
+              <input type="number" class="form-control form-control-sm w-auto" [(ngModel)]="user.critical_pulse" placeholder="Max Puls">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm w-auto" [(ngModel)]="user.critical_heart_rate" placeholder="Max Tętno">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm w-auto" [(ngModel)]="user.critical_temperature" placeholder="Max Temperatura">
+            </td>
+            <td>
+              <button class="btn btn-primary btn-sm" (click)="saveCriticalValues(user)">Edytuj</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

@@ -62,4 +62,34 @@ export class ApiService {
   isLoggedIn(): boolean {
     return !!this.getCurrentUser();
   }
+
+  searchUsers(query: string): Observable<{ usernames: string[] }> {
+    return this.http.get<{ usernames: string[] }>(`${this.baseUrl}/users/search`, {
+      params: { query }
+    });
+  }
+
+  getFollowUsers(username: string): Observable<{ follow_users: any[] }> {
+    return this.http.get<{ follow_users: any[] }>(`${this.baseUrl}/users/follow`, {
+      params: { username }
+    });
+  }
+
+  addFollowUser(username: string, followUser: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/users/follow`, {
+      username,
+      follow_user: followUser,
+      critical_pulse : 0,
+      critical_heart_rate: 0,
+      critical_temperature: 0
+    });
+  }
+
+  updateCriticalValues(username: string, followUser: string, criticalValues: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/users/follow`, {
+      username,
+      follow_user: followUser,
+      ...criticalValues
+    });
+  }
 }
