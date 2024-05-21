@@ -1,0 +1,35 @@
+<div class="container">
+    <div class="row">
+      <div class="col">
+        <h2>Register Vitals</h2>
+        <form [formGroup]="vitalsForm">
+          <div class="form-group mb-2">
+            <label>
+              <input type="checkbox" formControlName="sendPulse">
+              Wysyłaj puls
+            </label>
+            <input type="number" class="form-control" formControlName="pulse" placeholder="Pulse">
+          </div>
+          <div class="form-group mb-2">
+            <label>
+              <input type="checkbox" formControlName="sendHeartRate">
+              Wysyłaj tętno
+            </label>
+            <input type="number" class="form-control" formControlName="heartRate" placeholder="Heart Rate">
+          </div>
+          <div class="form-group mb-2">
+            <label>
+              <input type="checkbox" formControlName="sendTemperature">
+              Wysyłaj temperaturę
+            </label>
+            <input type="number" class="form-control" formControlName="temperature" placeholder="Temperature">
+          </div>
+          <div class="form-group mb-2">
+            <label for="interval">Interwał w sekundach (dla aktywnych pomiarów):</label>
+            <input type="number" id="interval" class="form-control" formControlName="interval" placeholder="Interval in secunds">
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
