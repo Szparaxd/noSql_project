@@ -1,2 +1,22 @@
-<app-vitals />
-<app-user-listener />
+<h1>Welcome to the Chat!</h1>
+    <button (click)="sendMessage()">Send Message</button>
+    <ul>
+      <li *ngFor="let message of messages">{{ message }}</li>
+    </ul>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <h1>{{ getUsername() }}</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <app-vitals />
+            <app-user-listener (userChanged)="user = $event" />
+        </div>
+        <div class="col-6">
+            <app-folow-user-details *ngIf="user" [user]="user" />
+        </div>
+    </div>
+</div>

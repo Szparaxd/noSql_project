@@ -5,14 +5,41 @@ import time
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from initializer import *
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 CORS(app)
-
 r = redis.Redis(host='localhost', port=6379, db=0)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+class MyHub:
+    def __init__(self, namespace):
+        self.namespace = namespace
+        socketio.on_event('connect', self.on_connect, namespace=self.namespace)
+        socketio.on_event('disconnect', self.on_disconnect, namespace=self.namespace)
+        socketio.on_event('my_event', self.on_my_event, namespace=self.namespace)
+
+    def on_connect(self):
+        print('Client connected')
+
+    def on_disconnect(self):
+        print('Client disconnected')
+
+    def on_my_event(self, data):
+        print('Received my_event:', data)
+        emit('my_response', {'data': 'got it!'})
+
+    def alert_critical_vitals(self, username, vital_name, value):
+        """Emit a critical alert message to the hub."""
+        message = {
+            'username': username,
+            'message': f'{vital_name} has exceeded critical threshold with a value of {value}'
+        }
+        emit('critical_vital_alert', message, namespace=self.namespace)
 
 @app.route('/auth/register', methods=['POST'])
 def register():
@@ -82,6 +109,31 @@ def register_vitals():
         r.zadd(f"user:{username}:temperature", {str(timestamp): temperature})
         registered_any_vital = True
 
+    pattern = f'user:*:follow_users:{username}'
+    matching_keys = r.scan_iter(pattern)
+    
+
+    for key in matching_keys:
+        alerts = []
+        
+        follower_user = key.decode('utf-8').split(":")[1]
+
+        follower_data = r.hgetall(key)
+        critical_pulse = int(follower_data.get(b'critical_pulse', 0))
+        critical_heart_rate = int(follower_data.get(b'critical_heart_rate', 0))
+        critical_temperature = int(follower_data.get(b'critical_temperature', 0))
+
+        # Check if current vitals exceed critical thresholds
+        if critical_pulse > 0 and pulse is not None and pulse > critical_pulse:
+            alerts.append(f"Critical pulse threshold exceeded for {key}.")
+        if critical_heart_rate > 0 and heart_rate is not None and heart_rate > critical_heart_rate:
+            alerts.append(f"Critical heart rate threshold exceeded for {key}.")
+        if critical_temperature > 0 and temperature is not None and temperature > critical_temperature:
+            alerts.append(f"Critical temperature threshold exceeded for {key}.")
+
+        if alerts:
+            r.publish(f"alerts:{follower_user}", json.dumps({'username': username, 'alerts': alerts}))
+
     if not registered_any_vital:
         return jsonify({'message': 'At least one vital parameter (pulse, heart_rate, temperature) is required'}), 400
 
@@ -105,7 +157,6 @@ def search_users():
     matching_users = sorted([username for username in usernames if query.lower() in username.lower()])
 
     return jsonify({'usernames': matching_users[:10]}), 200
-
 
 @app.route('/users/follow', methods=['GET'])
 def get_follow_user():
@@ -144,6 +195,83 @@ def add_follow_user():
     r.hset(f"user:{username}:follow_users:{follow_user}", mapping=critical_values)
     return jsonify({'message': 'User added and critical values set'}), 201
 
+@app.route('/users/follow', methods=['DELETE'])
+def remove_follow_user():
+    data = request.get_json()
+    username = data.get('username')
+    follow_user = data.get('follow_user')
+    
+    if not username or not follow_user:
+        return jsonify({'message': 'Both username and follow_user are required'}), 400
+
+    follow_key = f"user:{username}:follow_users:{follow_user}"
+    if r.exists(follow_key):
+        r.delete(follow_key)
+        return jsonify({'message': 'Follow user removed successfully'}), 200
+    else:
+        return jsonify({'message': 'Follow user does not exist'}), 404
+
+@app.route('/users/follow', methods=['PUT'])
+def update_follow_user():
+    data = request.get_json()
+    username = data.get('username')
+    follow_user = data.get('follow_user')
+    
+    # Extract critical values from the request data, ignoring username and follow_user keys
+    critical_values = {k: v for k, v in data.items() if k not in ['username', 'follow_user']}
+    
+    if not username or not follow_user:
+        return jsonify({'message': 'Both username and follow_user are required'}), 400
+
+    # Update the critical values in Redis
+    follow_key = f"user:{username}:follow_users:{follow_user}"
+    if r.exists(follow_key):
+        r.hset(follow_key, mapping=critical_values)
+        return jsonify({'message': 'Follow user updated successfully'}), 200
+    else:
+        return jsonify({'message': 'Follow user does not exist'}), 404
+
+@app.route('/vitals/details', methods=['GET'])
+def get_vitals_details():
+    username = request.args.get('username', '')
+
+    if not username:
+        return jsonify({'message': 'Username is required'}), 400
+
+    if not r.exists(f"user:{username}"):
+        return jsonify({'message': 'User does not exist'}), 404
+
+    pulse = r.zrange(f"user:{username}:pulse", 0, -1, withscores=True)
+    heart_rate = r.zrange(f"user:{username}:heart_rate", 0, -1, withscores=True)
+    temperature = r.zrange(f"user:{username}:temperature", 0, -1, withscores=True)
+
+    pulse.sort(key=lambda x: x[0], reverse=True)
+    heart_rate.sort(key=lambda x: x[0], reverse=True)
+    temperature.sort(key=lambda x: x[0], reverse=True)
+
+    vitals = {
+        'pulse': pulse[0] if pulse else None,
+        'heart_rate': heart_rate[0] if heart_rate else None,
+        'temperature': temperature[0] if temperature else None
+    }
+
+    for key, value in vitals.items():
+        if value:
+            t, v = value
+            timestamp = int(t.decode('utf-8'))
+            value_decoded = float(v) if v else None
+            utc_datetime = datetime.fromtimestamp(timestamp / 1000.0, timezone.utc)
+
+            vitals[key] = {
+                'datetime': utc_datetime.strftime('%Y-%m-%dT%H:%M:%SZ'),  # Format datetime in ISO 8601
+                'value': value_decoded
+            }
+
+    return jsonify({'username': username, 'vitals': vitals}), 200
+
+my_hub = MyHub('/myhub')
+
 if __name__ == '__main__':
     initialize_data()
+    socketio.run(app)
     app.run(debug=True)

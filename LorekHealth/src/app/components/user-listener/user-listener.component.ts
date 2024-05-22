@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { UserSearchComponent } from '../user-search/user-search.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -13,8 +13,8 @@ import { ApiService } from '../../services/api.service';
 })
 export class UserListenerComponent {
     followUsers: any[] = [];
-    username = 'zxcv'; // Replace with the actual username you want to fetch data for
-  
+    @Output() userChanged = new EventEmitter<any>();
+
     constructor(private apiService: ApiService) {}
   
     ngOnInit(): void {
@@ -22,13 +22,13 @@ export class UserListenerComponent {
     }
   
     fetchFollowUsers(): void {
-      this.apiService.getFollowUsers(this.username).subscribe(response => {
+      this.apiService.getFollowUsers(this.apiService.getUsername()!).subscribe(response => {
         this.followUsers = response.follow_users;
       });
     }
   
     addFollowUser(followUsername: string): void {
-      this.apiService.addFollowUser(this.username, followUsername).subscribe(() => {
+      this.apiService.addFollowUser(this.apiService.getUsername()!, followUsername).subscribe(() => {
         this.fetchFollowUsers(); // Refresh the follow users list after adding
       });
     }
@@ -39,8 +39,20 @@ export class UserListenerComponent {
         critical_heart_rate: user.critical_heart_rate,
         critical_temperature: user.critical_temperature
       };
-      this.apiService.updateCriticalValues(this.username, user.username, criticalValues).subscribe(() => {
+      this.apiService.updateCriticalValues(this.apiService.getUsername()!, user.username, criticalValues).subscribe(() => {
         // Optionally, handle the response, e.g., show a notification
       });
+    }
+
+    removeFollowUser(user: any): void {
+      this.apiService.removeFollowUser(this.apiService.getUsername()!, user.username)
+      .subscribe(() => {
+        this.fetchFollowUsers(); // Refresh the follow users list after removing
+      });
+    }
+
+    setUser(user : any){
+      console.log(user.username)
+      this.userChanged.emit(user);
     }
 }

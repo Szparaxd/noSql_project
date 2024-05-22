@@ -10,26 +10,28 @@
         <thead class="thead-dark">
           <tr>
             <th scope="col">Nazwa</th>
-            <th scope="col">Max Puls</th>
-            <th scope="col">Max Tętno</th>
-            <th scope="col">Max Temperatura</th>
+            <th scope="col">Puls</th>
+            <th scope="col">Tętno</th>
+            <th scope="col">Temp</th>
             <th scope="col"></th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let user of followUsers">
-            <th scope="row">{{ user.username }}</th>
+          <tr *ngFor="let user of followUsers" (click)="setUser(user)">
+            <td>{{ user.username }}</td>
             <td>
-              <input type="number" class="form-control form-control-sm w-auto" [(ngModel)]="user.critical_pulse" placeholder="Max Puls">
+              <input style="width: 80px;" type="number" class="form-control form-control-sm" [(ngModel)]="user.critical_pulse" placeholder="Max Puls">
             </td>
             <td>
-              <input type="number" class="form-control form-control-sm w-auto" [(ngModel)]="user.critical_heart_rate" placeholder="Max Tętno">
+              <input style="width: 80px;" type="number" class="form-control form-control-sm" [(ngModel)]="user.critical_heart_rate" placeholder="Max Tętno">
             </td>
             <td>
-              <input type="number" class="form-control form-control-sm w-auto" [(ngModel)]="user.critical_temperature" placeholder="Max Temperatura">
+              <input style="width: 80px;" type="number" class="form-control form-control-sm" [(ngModel)]="user.critical_temperature" placeholder="Max Temperatura">
             </td>
             <td>
               <button class="btn btn-primary btn-sm" (click)="saveCriticalValues(user)">Edytuj</button>
+              <button class="btn btn-danger btn-sm" (click)="removeFollowUser(user)">Usuń</button>
+              <button class="btn btn-primary btn-sm" (click)="setUser(user)">Wybierz</button>
             </td>
           </tr>
         </tbody>

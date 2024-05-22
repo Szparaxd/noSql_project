@@ -4,14 +4,12 @@ import { Router } from '@angular/router';
 import { Observable, catchError, throwError } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ApiService {
-  private baseUrl = 'http://localhost:5000'
+  private baseUrl = 'http://localhost:5000';
 
-  constructor(private http: HttpClient,
-    private router: Router
-  ) { }
+  constructor(private http: HttpClient, private router: Router) {}
 
   registerUser(username: string, password: string): Observable<any> {
     const url = `${this.baseUrl}/auth/register`;
@@ -20,12 +18,14 @@ export class ApiService {
 
   loginUser(username: string, password: string): Observable<any> {
     const url = `${this.baseUrl}/auth/login`;
-    return this.http.post<{ message: string, user_id: string }>(url, { username, password }).pipe(
-      catchError((error) => {
-        console.error('Login failed', error);
-        return throwError(() => new Error('Login failed'));
-      })
-    );
+    return this.http
+      .post<{ message: string; user_id: string }>(url, { username, password })
+      .pipe(
+        catchError((error) => {
+          console.error('Login failed', error);
+          return throwError(() => new Error('Login failed'));
+        })
+      );
   }
 
   handleAuthentication(username: string, user_id: string) {
@@ -34,13 +34,18 @@ export class ApiService {
     this.router.navigate(['/dashboard']);
   }
 
-  registerVitals(username: string, pulse: number | null, heartRate: number | null, temperature: number | null): Observable<any> {
+  registerVitals(
+    username: string,
+    pulse: number | null,
+    heartRate: number | null,
+    temperature: number | null
+  ): Observable<any> {
     const url = `${this.baseUrl}/register_vitals`;
     return this.http.post(url, {
       username,
       pulse,
       heart_rate: heartRate,
-      temperature
+      temperature,
     });
   }
 
@@ -64,32 +69,59 @@ export class ApiService {
   }
 
   searchUsers(query: string): Observable<{ usernames: string[] }> {
-    return this.http.get<{ usernames: string[] }>(`${this.baseUrl}/users/search`, {
-      params: { query }
-    });
+    return this.http.get<{ usernames: string[] }>(
+      `${this.baseUrl}/users/search`,
+      {
+        params: { query },
+      }
+    );
   }
 
-  getFollowUsers(username: string): Observable<{ follow_users: any[] }> {
-    return this.http.get<{ follow_users: any[] }>(`${this.baseUrl}/users/follow`, {
-      params: { username }
-    });
+  getFollowUsers(username:string): Observable<{ follow_users: any[] }> {
+    return this.http.get<{ follow_users: any[] }>(
+      `${this.baseUrl}/users/follow`,
+      {
+        params: { username },
+      }
+    );
   }
 
   addFollowUser(username: string, followUser: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/users/follow`, {
       username,
       follow_user: followUser,
-      critical_pulse : 0,
+      critical_pulse: 0,
       critical_heart_rate: 0,
-      critical_temperature: 0
+      critical_temperature: 0,
     });
   }
 
-  updateCriticalValues(username: string, followUser: string, criticalValues: any): Observable<any> {
+  updateCriticalValues(
+    username: string,
+    followUser: string,
+    criticalValues: any
+  ): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/users/follow`, {
       username,
       follow_user: followUser,
-      ...criticalValues
+      ...criticalValues,
     });
+  }
+
+  removeFollowUser(username: string, followUsername: string): Observable<any> {
+    const url = `${this.baseUrl}/users/follow`; // Update to match the correct endpoint path
+    return this.http.delete(url, {
+      body: { username, follow_user: followUsername }, // Include body in delete request
+    });
+  }
+
+  getVitalsDetails(username: string): Observable<any> {
+    const url = `${this.baseUrl}/vitals/details?username=${username}`;
+    return this.http.get(url).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch vitals details', error);
+        return throwError(() => new Error('Failed to fetch vitals details'));
+      })
+    );
   }
 }
