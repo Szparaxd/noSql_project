@@ -30,6 +30,8 @@ export class DashboardComponent {
     private socketService: SocketService,
     private apiService: ApiService
   ) {
+
+    this.socketService.initializeSocket(this.apiService.getUsername()!)
     this.messageSubscription = this.socketService.getMessage().subscribe({
       next: (message) => {
         this.messages.push(message);

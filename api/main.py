@@ -2,6 +2,7 @@ import redis
 import uuid
 import json
 import time
+import threading
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -17,29 +18,48 @@ r = redis.Redis(host='localhost', port=6379, db=0)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 class MyHub:
-    def __init__(self, namespace):
+    def __init__(self, app, namespace):
+        self.app = app
         self.namespace = namespace
+        self.user_sessions = {} 
         socketio.on_event('connect', self.on_connect, namespace=self.namespace)
         socketio.on_event('disconnect', self.on_disconnect, namespace=self.namespace)
-        socketio.on_event('my_event', self.on_my_event, namespace=self.namespace)
 
     def on_connect(self):
-        print('Client connected')
+        username = request.args.get('username')
+        if not username:
+            emit('error', {'error': 'Username is required'}, namespace=self.namespace)
+            return False  # Disconnect if no username is provided
+        print(f'Client {username} connected')
+        self.user_sessions[request.sid] = username
+        self.start_listening(username)
 
     def on_disconnect(self):
         print('Client disconnected')
 
-    def on_my_event(self, data):
-        print('Received my_event:', data)
-        emit('my_response', {'data': 'got it!'})
+    def start_listening(self, username):
+        """Starts a new thread to listen for Redis alerts for the specific user."""
+        thread = threading.Thread(target=self.listen_to_redis, args=(username,))
+        thread.daemon = True
+        thread.start()
 
-    def alert_critical_vitals(self, username, vital_name, value):
-        """Emit a critical alert message to the hub."""
-        message = {
-            'username': username,
-            'message': f'{vital_name} has exceeded critical threshold with a value of {value}'
-        }
-        emit('critical_vital_alert', message, namespace=self.namespace)
+    def listen_to_redis(self, username):
+        from redis import Redis
+        r = Redis()
+        pubsub = r.pubsub()
+        pubsub.subscribe(f'alerts:{username}')
+        for message in pubsub.listen():
+            if message['type'] == 'message':
+                alert_data = json.loads(message['data'])
+                print(f'Received Redis message for {username}: {alert_data}')
+                self.emit_alert(username, alert_data)
+
+    def emit_alert(self, username, data):
+        """Emit alert only to the specific connected user identified by username."""
+        session_ids = [sid for sid, user in self.user_sessions.items() if user == username]
+        for sid in session_ids:
+            socketio.emit('alert', data, room=sid, namespace=self.namespace)  # Wyślij alert tylko do sesji danego użytkownika
+
 
 @app.route('/auth/register', methods=['POST'])
 def register():
@@ -269,7 +289,7 @@ def get_vitals_details():
 
     return jsonify({'username': username, 'vitals': vitals}), 200
 
-my_hub = MyHub('/myhub')
+my_hub = MyHub(app, '/myhub')
 
 if __name__ == '__main__':
     initialize_data()
