@@ -14,7 +14,9 @@ from datetime import datetime, timezone
 
 app = Flask(__name__)
 CORS(app)
-r = redis.Redis(host='localhost', port=6379, db=0)
+
+#r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.StrictRedis(host='localhost', port=6379, db=0, username="default", password='yourStrongPasswordHere!')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 class MyHub:
@@ -51,8 +53,8 @@ class MyHub:
         self.listen_threads[username] = (thread, stop_thread)
 
     def listen_to_redis(self, username, stop_thread):
-        from redis import Redis
-        r = Redis()
+        #from redis import Redis
+        #r = Redis()
         pubsub = r.pubsub()
         pubsub.subscribe(f'alerts:{username}')
         for message in pubsub.listen():
@@ -131,22 +133,25 @@ def register_vitals():
 
     if pulse is not None:
         r.zadd(f"user:{username}:pulse", {str(timestamp): pulse})
-        r.rpush(f"user:{username}:pulse_list", f'{str(timestamp)}:{pulse}')
+        # r.rpush(f"user:{username}:pulse_list", f'{str(timestamp)}:{pulse}')
         registered_any_vital = True
 
     if heart_rate is not None:
         r.zadd(f"user:{username}:heart_rate", {str(timestamp): heart_rate})
-        r.rpush(f"user:{username}:heart_rate_list", f'{str(timestamp)}:{heart_rate}')
+        # r.rpush(f"user:{username}:heart_rate_list", f'{str(timestamp)}:{heart_rate}')
         
         registered_any_vital = True
 
     if temperature is not None:
         r.zadd(f"user:{username}:temperature", {str(timestamp): temperature})
-        r.rpush(f"user:{username}:temperature_list", f'{str(timestamp)}:{temperature}')
+        # r.rpush(f"user:{username}:temperature_list", f'{str(timestamp)}:{temperature}')
         registered_any_vital = True
 
     pattern = f'user:*:follow_users:{username}'
     matching_keys = r.scan_iter(pattern)
+
+    # todo
+    # followers = r.smembers(f"user:followers:{username}")
 
     print(matching_keys)
     
@@ -169,7 +174,9 @@ def register_vitals():
             alerts.append(f"Critical temperature ({temperature}) threshold exceeded for {username}.")
 
         if alerts:
-            r.publish(f"alerts:{follower_user}", json.dumps({'username': username, 'alerts': alerts}))
+            alert_message = json.dumps({'username': username, 'alerts': alerts, 'timestamp': timestamp})
+            r.publish(f"alerts:{follower_user}", alert_message)
+            r.lpush(f"alerts:{username}:history:{follower_user}", alert_message)
 
     if not registered_any_vital:
         return jsonify({'message': 'At least one vital parameter (pulse, heart_rate, temperature) is required'}), 400
@@ -306,9 +313,32 @@ def get_vitals_details():
 
     return jsonify({'username': username, 'vitals': vitals}), 200
 
+@app.route('/get_alerts', methods=['GET'])
+def get_alerts():
+    username = request.args.get('username')
+    follower_user = request.args.get('follow_user')
+
+    if not username:
+        return jsonify({'message': 'Username parameter is required'}), 400
+
+    alerts = r.lrange(f"alerts:{follower_user}:history:{username}", 0, 9)  
+
+    if not alerts:
+        return jsonify({'message': 'No alerts found for this user'}), 404
+
+    formatted_alerts = []
+    for alert in alerts:
+        alert_data = json.loads(alert)
+        # Convert timestamp to readable UTC date format
+        date_utc = datetime.utcfromtimestamp(alert_data['timestamp'] / 1000).strftime('%Y-%m-%d %H:%M:%S UTC')
+        alert_data['date_utc'] = date_utc
+        formatted_alerts.append(alert_data)
+
+    return jsonify({'username': username, 'alerts': formatted_alerts}), 200
+
 my_hub = MyHub(app, '/myhub')
 
 if __name__ == '__main__':
-    initialize_data()
+    initialize_data(r)
     socketio.run(app)
     app.run(debug=True)

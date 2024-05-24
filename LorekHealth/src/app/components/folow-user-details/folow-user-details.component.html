@@ -1,49 +1,59 @@
 <div class="container">
     <div class="row">
-        <div class="col">
-            <h1>{{ user.username }}</h1>
-        </div>
-    </div>
-    <div class="row">
         <div class="col-12">
-            <h3>Najnowsze dane</h3>
+            <h3> Najnowsze dane uzytkonika <strong> {{ user.username }}</strong></h3>
         </div>
-
+        <hr>
         <div class="col-12">
             <div class="row" *ngIf="vitals && vitals.vitals.heart_rate">
-                <h2>Tętno</h2>
+                <h4>Tętno</h4>
                 <div class="col">
                     <label>Data UTC</label>
                     <input type="text" class="form-control" value="{{vitals.vitals.heart_rate.datetime}}" disabled>
                 </div>
                 <div class="col">
                     <label>Pomiar</label>
-                    <input type="text" class="form-control" value="{{vitals.vitals.heart_rate.value}}" disabled >
+                    <input type="text" class="form-control" value="{{vitals.vitals.heart_rate.value}}" disabled>
                 </div>
             </div>
 
             <div class="row" *ngIf="vitals && vitals.vitals.pulse">
-                <h2>Puls</h2>
+                <h4>Puls</h4>
                 <div class="col">
                     <label>Data UTC</label>
                     <input type="text" class="form-control" value="{{vitals.vitals.pulse.datetime}}" disabled>
                 </div>
                 <div class="col">
                     <label>Pomiar</label>
-                    <input type="text" class="form-control" value="{{vitals.vitals.pulse.value}}" disabled >
+                    <input type="text" class="form-control" value="{{vitals.vitals.pulse.value}}" disabled>
                 </div>
             </div>
 
             <div class="row" *ngIf="vitals && vitals.vitals.temperature">
-                <h2>Temperatrura</h2>
+                <h4>Temperatrura</h4>
                 <div class="col">
                     <label>Data UTC</label>
                     <input type="text" class="form-control" value="{{vitals.vitals.temperature.datetime}}" disabled>
                 </div>
                 <div class="col">
                     <label>Pomiar</label>
-                    <input type="text" class="form-control" value="{{vitals.vitals.temperature.value}}" disabled >
+                    <input type="text" class="form-control" value="{{vitals.vitals.temperature.value}}" disabled>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <h4>Ostatnie powiadomienia</h4>
+        </div>
+        <hr>
+        <div class="row" *ngIf="alerts">
+            <div class="col-12" *ngFor="let alert of alerts.alerts">
+                <span>{{ alert.date_utc }}</span> 
+                <ul>
+                    <li *ngFor="let message of alert.alerts">{{ message}}</li>
+                </ul>
             </div>
         </div>
     </div>

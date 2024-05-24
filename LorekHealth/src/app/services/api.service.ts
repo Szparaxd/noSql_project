@@ -77,7 +77,7 @@ export class ApiService {
     );
   }
 
-  getFollowUsers(username:string): Observable<{ follow_users: any[] }> {
+  getFollowUsers(username: string): Observable<{ follow_users: any[] }> {
     return this.http.get<{ follow_users: any[] }>(
       `${this.baseUrl}/users/follow`,
       {
@@ -121,6 +121,18 @@ export class ApiService {
       catchError((error) => {
         console.error('Failed to fetch vitals details', error);
         return throwError(() => new Error('Failed to fetch vitals details'));
+      })
+    );
+  }
+
+  getAlerts(follow_username: string) : Observable<any> {
+    const us = this.getUsername();
+    const url = `${this.baseUrl}/get_alerts?username=${us}&follow_user=${follow_username}`
+    
+    return this.http.get(url).pipe(
+      catchError((error) => {
+        console.error('Failed to fetch aletrs', error);
+        return throwError(() => new Error('Failed to fetch aletrs'))
       })
     );
   }
