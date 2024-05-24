@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Socket, SocketIoConfig } from 'ngx-socket-io';
+import { ToastrService } from 'ngx-toastr';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -8,7 +9,7 @@ import { Observable } from 'rxjs';
 export class SocketService {
   config: SocketIoConfig = { url: 'http://localhost:5000/myhub', options: {} };
 
-  constructor(private socket: Socket) { }
+  constructor(private socket: Socket,private toastr: ToastrService) { }
 
   initializeSocket(username: string): void {
     this.config = {
@@ -20,8 +21,9 @@ export class SocketService {
     this.socket = new Socket(this.config);
     this.connect();
 
-    this.socket.fromEvent('alert').subscribe(data => {
+    this.socket.fromEvent('alert').subscribe((data:any) => {
       console.log('Received alert:', data);
+      this.toastr.error(`${data.alerts}`);
     });
 
     this.socket.fromEvent('error').subscribe(error => {

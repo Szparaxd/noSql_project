@@ -21,7 +21,8 @@ class MyHub:
     def __init__(self, app, namespace):
         self.app = app
         self.namespace = namespace
-        self.user_sessions = {} 
+        self.user_sessions = {}
+        self.listen_threads = {}  # Słownik do przechowywania wątków i flag dla każdego użytkownika
         socketio.on_event('connect', self.on_connect, namespace=self.namespace)
         socketio.on_event('disconnect', self.on_disconnect, namespace=self.namespace)
 
@@ -29,43 +30,51 @@ class MyHub:
         username = request.args.get('username')
         if not username:
             emit('error', {'error': 'Username is required'}, namespace=self.namespace)
-            return False  # Disconnect if no username is provided
+            return False
         print(f'Client {username} connected')
         self.user_sessions[request.sid] = username
         self.start_listening(username)
 
     def on_disconnect(self):
-        print('Client disconnected')
+        username = self.user_sessions.pop(request.sid, None)
+        if username:
+            self.listen_threads[username][1].set()  # Ustaw flagę na True, aby zatrzymać wątek
+            print(f'Client {username} disconnected')
+        else:
+            print('Client disconnected with unknown session ID')
 
     def start_listening(self, username):
-        """Starts a new thread to listen for Redis alerts for the specific user."""
-        thread = threading.Thread(target=self.listen_to_redis, args=(username,))
+        stop_thread = threading.Event()  # Flaga do kontrolowania wątku
+        thread = threading.Thread(target=self.listen_to_redis, args=(username, stop_thread))
         thread.daemon = True
         thread.start()
+        self.listen_threads[username] = (thread, stop_thread)
 
-    def listen_to_redis(self, username):
+    def listen_to_redis(self, username, stop_thread):
         from redis import Redis
         r = Redis()
         pubsub = r.pubsub()
         pubsub.subscribe(f'alerts:{username}')
         for message in pubsub.listen():
+            if stop_thread.is_set():  # Sprawdź, czy flaga została ustawiona
+                print(f"Stopping listening for {username}")
+                break
             if message['type'] == 'message':
                 alert_data = json.loads(message['data'])
                 print(f'Received Redis message for {username}: {alert_data}')
                 self.emit_alert(username, alert_data)
 
     def emit_alert(self, username, data):
-        """Emit alert only to the specific connected user identified by username."""
         session_ids = [sid for sid, user in self.user_sessions.items() if user == username]
         for sid in session_ids:
             socketio.emit('alert', data, room=sid, namespace=self.namespace)  # Wyślij alert tylko do sesji danego użytkownika
-
 
 @app.route('/auth/register', methods=['POST'])
 def register():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
+    email = data.get('email')
     
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
@@ -73,10 +82,13 @@ def register():
     if r.exists(f"user:{username}"):
         return jsonify({'message': 'User already exists'}), 400
     
+    if not email:
+        email = ''
+
     hashed_password = generate_password_hash(password)
     user_id = str(uuid.uuid4())
     
-    r.hset(f"user:{username}", mapping={'id': user_id, 'password': hashed_password})
+    r.hset(f"user:{username}", mapping={'id': user_id, 'username':username, 'password': hashed_password, 'email': email })
     
     return jsonify({'message': 'User registered successfully'}), 201
 
@@ -119,20 +131,25 @@ def register_vitals():
 
     if pulse is not None:
         r.zadd(f"user:{username}:pulse", {str(timestamp): pulse})
+        r.rpush(f"user:{username}:pulse_list", f'{str(timestamp)}:{pulse}')
         registered_any_vital = True
 
     if heart_rate is not None:
         r.zadd(f"user:{username}:heart_rate", {str(timestamp): heart_rate})
+        r.rpush(f"user:{username}:heart_rate_list", f'{str(timestamp)}:{heart_rate}')
+        
         registered_any_vital = True
 
     if temperature is not None:
         r.zadd(f"user:{username}:temperature", {str(timestamp): temperature})
+        r.rpush(f"user:{username}:temperature_list", f'{str(timestamp)}:{temperature}')
         registered_any_vital = True
 
     pattern = f'user:*:follow_users:{username}'
     matching_keys = r.scan_iter(pattern)
-    
 
+    print(matching_keys)
+    
     for key in matching_keys:
         alerts = []
         
@@ -145,11 +162,11 @@ def register_vitals():
 
         # Check if current vitals exceed critical thresholds
         if critical_pulse > 0 and pulse is not None and pulse > critical_pulse:
-            alerts.append(f"Critical pulse threshold exceeded for {key}.")
+            alerts.append(f"Critical pulse ({pulse}) threshold exceeded for {username}.")
         if critical_heart_rate > 0 and heart_rate is not None and heart_rate > critical_heart_rate:
-            alerts.append(f"Critical heart rate threshold exceeded for {key}.")
+            alerts.append(f"Critical heart rate ({heart_rate}) threshold exceeded for {username}.")
         if critical_temperature > 0 and temperature is not None and temperature > critical_temperature:
-            alerts.append(f"Critical temperature threshold exceeded for {key}.")
+            alerts.append(f"Critical temperature ({temperature}) threshold exceeded for {username}.")
 
         if alerts:
             r.publish(f"alerts:{follower_user}", json.dumps({'username': username, 'alerts': alerts}))

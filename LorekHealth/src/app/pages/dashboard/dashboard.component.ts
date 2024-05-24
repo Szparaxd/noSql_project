@@ -7,6 +7,7 @@ import { FolowUserDetailsComponent } from '../../components/folow-user-details/f
 import { SocketService } from '../../services/socket.service';
 import { Subscription } from 'rxjs';
 import { ApiService } from '../../services/api.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-dashboard',
@@ -28,7 +29,8 @@ export class DashboardComponent {
 
   constructor(
     private socketService: SocketService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private toastr: ToastrService
   ) {
 
     this.socketService.initializeSocket(this.apiService.getUsername()!)
