@@ -1,6 +1,6 @@
 ## Aby uruchomić bazę w docker 
 ```
-docker run -d --name redis-stack -v C:\Users\Lorek\Desktop\noSql_project\redis.conf:/usr/local/etc/redis/redis.conf \ -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
+docker run -d --name redis-stack -v C:\Users\Lorek\Desktop\noSql_project\redis.conf:/usr/local/etc/redis/redis.conf -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
 
 docker run -v `pwd`C:\Users\Lorek\Desktop\noSql_project\redis.conf:/redis-stack.conf -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
 ```
