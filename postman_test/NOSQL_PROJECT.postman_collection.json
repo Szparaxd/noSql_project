@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"user_id\": \"12345\",\r\n    \"pulse\": {{$randomInt}}\r\n}",
+							"raw": "{\r\n    \"username\": \"{{$randomUserName}}\",\r\n    \"password\": \"{{$randomPassword}}\",\r\n    \"email\": \"{{$randomEmail}}\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -24,14 +24,15 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:5000/add_pulse",
+							"raw": "http://localhost:5000/auth/register",
 							"protocol": "http",
 							"host": [
 								"localhost"
 							],
 							"port": "5000",
 							"path": [
-								"add_pulse"
+								"auth",
+								"register"
 							]
 						}
 					},
@@ -44,7 +45,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"username\": \"exampleUser\",\r\n    \"password\": \"exampleUser\"\r\n}",
+							"raw": "{\r\n    \"username\": \"exampleUser\",\r\n    \"password\": \"examplePassword\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -100,6 +101,106 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "/users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/users/follow",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"username\" : \"zxcv\",\r\n    \"follow_user\" : \"asdf\",\r\n    \"critical_pulse\": 90,\r\n    \"critical_heart_rate\": 100,\r\n    \"critical_temperature\": 40.1\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/users/follow",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"users",
+						"follow"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/users/search",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/users/search?query=ale",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"users",
+						"search"
+					],
+					"query": [
+						{
+							"key": "query",
+							"value": "ale"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/users/search Copy",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/users/follow?username=ale",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"users",
+						"follow"
+					],
+					"query": [
+						{
+							"key": "username",
+							"value": "ale"
+						}
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }
